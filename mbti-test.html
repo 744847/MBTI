@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="no-referrer">
+    <title>MBTI 100题专业测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #8899a6;
+            --secondary: #e2e8f0;
+            --accent: #6b7280;
+            --text: #374151;
+            --light: #f9fafb;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            touch-action: manipulation; /* 优化手机触控 */
+        }
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 0.8rem;
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .progress-bar {
+            height: 6px;
+            background: var(--secondary);
+            border-radius: 3px;
+            margin-bottom: 0.8rem;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .question-counter {
+            text-align: center;
+            margin-bottom: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1.2rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .option-btn {
+            padding: 1rem 0.8rem;
+            border: 1px solid var(--secondary);
+            border-radius: 12px;
+            background: white;
+            color: var(--text);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        .option-btn:hover {
+            background: var(--secondary);
+        }
+        .option-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.2rem;
+            gap: 0.5rem;
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 0.9rem 0;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-size: 0.95rem;
+            cursor: pointer;
+            opacity: 0.7;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .nav-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .nav-btn:hover {
+            background: var(--accent);
+        }
+        .result-section {
+            display: none;
+            padding: 0.5rem 0;
+        }
+        .personality-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+        .personality-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+        }
+        .personality-title {
+            text-align: center;
+        }
+        .personality-title h2 {
+            font-size: 1.5rem;
+        }
+        .personality-title p {
+            font-size: 0.9rem;
+            color: var(--accent);
+        }
+        .chart-container {
+            height: 180px;
+            margin: 1.2rem 0;
+        }
+        .match-section {
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid var(--secondary);
+        }
+        .match-section h3 {
+            margin-bottom: 0.8rem;
+            color: var(--accent);
+            font-size: 1rem;
+        }
+        .match-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
+        .match-item {
+            background: var(--secondary);
+            padding: 0.4rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        .alert {
+            color: #ef4444;
+            text-align: center;
+            margin-bottom: 0.8rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="question-counter" id="questionCounter">题目 0/100</div>
+        <div class="question-container" id="questionContainer">
+            <div class="alert" id="alert">请先选择一个答案</div>
+            <div class="question-text" id="questionText">准备开始MBTI测试吗？</div>
+            <div class="options" id="options">
+                <button class="option-btn" onclick="startTest()">开始测试</button>
+            </div>
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prevBtn" onclick="prevQuestion()">上一题</button>
+                <button class="nav-btn" id="nextBtn" onclick="nextQuestion()">下一题</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card result-section" id="resultCard">
+        <div class="personality-header">
+            <div class="personality-icon" id="personalityIcon">?</div>
+            <div class="personality-title">
+                <h2 id="personalityType">ENFP</h2>
+                <p id="personalityName">竞选者</p>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="personalityChart"></canvas>
+        </div>
+        <div class="personality-description" id="personalityDesc">
+            <p>你的性格充满热情与创造力...</p>
+        </div>
+        
+        <div class="match-section">
+            <h3>💼 职业适配</h3>
+            <div class="match-list" id="careerMatches"></div>
+        </div>
+        
+        <div class="match-section">
+            <h3>❤️ 伴侣类型推荐</h3>
+            <div class="match-list" id="partnerMatches"></div>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            // 是/否题 (1-70)
+            {text:"你更倾向于外出社交而不是独处？", type:"bool", trait:"E"},
+            {text:"你更关注事实细节而非整体概念？", type:"bool", trait:"S"},
+            {text:"你做决定时更依赖逻辑而非情感？", type:"bool", trait:"T"},
+            {text:"你喜欢有计划的生活而非随性而为？", type:"bool", trait:"J"},
+            {text:"你在人群中感到精力充沛？", type:"bool", trait:"E"},
+            {text:"你相信直觉多于眼前的证据？", type:"bool", trait:"N"},
+            {text:"你容易察觉他人的情绪变化？", type:"bool", trait:"F"},
+            {text:"你喜欢保持灵活的日程安排？", type:"bool", trait:"P"},
+            {text:"你更愿意和朋友一起看电影而不是独自观看？", type:"bool", trait:"E"},
+            {text:"你更擅长记住具体的事件而非抽象的理论？", type:"bool", trait:"S"},
+            {text:"你认为公正比同情更重要？", type:"bool", trait:"T"},
+            {text:"你喜欢提前完成任务而不是拖延到最后一刻？", type:"bool", trait:"J"},
+            {text:"你经常主动发起新的社交活动？", type:"bool", trait:"E"},
+            {text:"你对未来的可能性比对当下的现实更感兴趣？", type:"bool", trait:"N"},
+            {text:"你更愿意妥协以维持和谐的关系？", type:"bool", trait:"F"},
+            {text:"你喜欢在最后一刻做决定以保留更多选择？", type:"bool", trait:"P"},
+            {text:"你在社交场合中通常是主动发言的人？", type:"bool", trait:"E"},
+            {text:"你更相信自己的经验而非他人的建议？", type:"bool", trait:"S"},
+            {text:"你在争论时更关注逻辑的正确性而非他人的感受？", type:"bool", trait:"T"},
+            {text:"你喜欢为每天制定详细的计划？", type:"bool", trait:"J"},
+            {text:"你不介意长时间的社交活动？", type:"bool", trait:"E"},
+            {text:"你擅长发现事物之间的联系和模式？", type:"bool", trait:"N"},
+            {text:"你经常为他人的处境感到担忧？", type:"bool", trait:"F"},
+            {text:"你不喜欢被严格的时间表束缚？", type:"bool", trait:"P"},
+            {text:"你通常是团队中的活跃分子？", type:"bool", trait:"E"},
+            {text:"你更关注实际的应用而非理论的探讨？", type:"bool", trait:"S"},
+            {text:"你认为客观的分析比主观的感受更可靠？", type:"bool", trait:"T"},
+            {text:"你喜欢把事情安排得井井有条？", type:"bool", trait:"J"},
+            {text:"你喜欢认识新朋友并拓展社交圈？", type:"bool", trait:"E"},
+            {text:"你对抽象的概念和理论感到兴奋？", type:"bool", trait:"N"},
+            {text:"你更愿意帮助他人解决情感问题而非实际问题？", type:"bool", trait:"F"},
+            {text:"你喜欢在不同的任务之间灵活切换？", type:"bool", trait:"P"},
+            {text:"你在社交中通常是能量的提供者？", type:"bool", trait:"E"},
+            {text:"你更相信眼见为实而非道听途说？", type:"bool", trait:"S"},
+            {text:"你认为规则和原则比个人感受更重要？", type:"bool", trait:"T"},
+            {text:"你喜欢在开始工作前先明确目标和步骤？", type:"bool", trait:"J"},
+            {text:"你享受成为关注的焦点？", type:"bool", trait:"E"},
+            {text:"你经常思考事物的深层含义和象征意义？", type:"bool", trait:"N"},
+            {text:"你认为理解他人的感受比解决问题更重要？", type:"bool", trait:"F"},
+            {text:"你不喜欢提前做太多计划，喜欢随遇而安？", type:"bool", trait:"P"},
+            {text:"你通常会主动与陌生人攀谈？", type:"bool", trait:"E"},
+            {text:"你更擅长处理具体的任务而非抽象的概念？", type:"bool", trait:"S"},
+            {text:"你在做决定时很少受到情绪的影响？", type:"bool", trait:"T"},
+            {text:"你喜欢把事情做完再去做其他事？", type:"bool", trait:"J"},
+            {text:"你需要定期的社交活动来保持活力？", type:"bool", trait:"E"},
+            {text:"你对未来的趋势和变化有敏锐的洞察力？", type:"bool", trait:"N"},
+            {text:"你经常为他人的成功感到由衷的高兴？", type:"bool", trait:"F"},
+            {text:"你喜欢保留多种选择，不喜欢过早做出承诺？", type:"bool", trait:"P"},
+            {text:"你在团队中通常是沟通的桥梁？", type:"bool", trait:"E"},
+            {text:"你更关注具体的细节而非整体的格局？", type:"bool", trait:"S"},
+            {text:"你认为诚实比委婉更重要？", type:"bool", trait:"T"},
+            {text:"你喜欢把工作空间整理得干净整洁？", type:"bool", trait:"J"},
+            {text:"你喜欢参加各种聚会和活动？", type:"bool", trait:"E"},
+            {text:"你经常产生新的想法和创意？", type:"bool", trait:"N"},
+            {text:"你更愿意牺牲自己的利益来帮助他人？", type:"bool", trait:"F"},
+            {text:"你喜欢在压力下工作，因为这样更有动力？", type:"bool", trait:"P"},
+            {text:"你通常是朋友圈中的消息中心？", type:"bool", trait:"E"},
+            {text:"你更擅长执行已有的计划而非制定新的计划？", type:"bool", trait:"S"},
+            {text:"你认为效率比和谐更重要？", type:"bool", trait:"T"},
+            {text:"你喜欢提前为假期做详细的规划？", type:"bool", trait:"J"},
+            {text:"你在社交后通常感到精力充沛而非疲惫？", type:"bool", trait:"E"},
+            {text:"你对哲学和形而上学的问题感兴趣？", type:"bool", trait:"N"},
+            {text:"你经常为他人的不幸感到难过？", type:"bool", trait:"F"},
+            {text:"你喜欢在截止日期前完成任务，因为这样更有效率？", type:"bool", trait:"P"},
+            {text:"你喜欢和他人一起工作而不是独自工作？", type:"bool", trait:"E"},
+            {text:"你更相信具体的数据而非直觉？", type:"bool", trait:"S"},
+            {text:"你认为批评是帮助他人成长的方式？", type:"bool", trait:"T"},
+            {text:"你喜欢把所有事情都安排得井然有序？", type:"bool", trait:"J"},
+            {text:"你经常主动联系朋友和家人？", type:"bool", trait:"E"},
+            {text:"你擅长看到事物的全貌和长远影响？", type:"bool", trait:"N"},
+            {text:"你认为和谐的关系比正确的观点更重要？", type:"bool", trait:"F"},
+            {text:"你喜欢保持开放的心态，随时接受新的信息？", type:"bool", trait:"P"},
+            {text:"你在社交中通常是破冰的人？", type:"bool", trait:"E"},
+            {text:"你更关注眼前的问题而非未来的可能性？", type:"bool", trait:"S"},
+            {text:"你在做决定时会优先考虑逻辑和证据？", type:"bool", trait:"T"},
+            {text:"你喜欢在开始前就知道所有的步骤？", type:"bool", trait:"J"},
+            {text:"你不喜欢长时间的独处？", type:"bool", trait:"E"},
+            {text:"你对艺术和美学有敏锐的感知力？", type:"bool", trait:"N"},
+            {text:"你经常为他人的感受着想？", type:"bool", trait:"F"},
+            {text:"你喜欢在不同的兴趣之间切换？", type:"bool", trait:"P"},
+            {text:"你通常是聚会的组织者？", type:"bool", trait:"E"},
+            {text:"你更擅长处理实际的问题而非理论的问题？", type:"bool", trait:"S"},
+            {text:"你认为理性比感性更可靠？", type:"bool", trait:"T"},
+            {text:"你喜欢把事情安排得有条不紊？", type:"bool", trait:"J"},
+
+            // 情景题 (71-100)
+            {text:"刚认识新朋友时，你更在意：A. 对方的幽默感与活力 B. 对方的深度与内涵", type:"scenario", trait:"E/I"},
+            {text:"团队合作中，你更倾向于：A. 制定详细计划 B. 随时调整方向", type:"scenario", trait:"J/P"},
+            {text:"解决问题时，你更依赖：A. 过往经验 B. 创新灵感", type:"scenario", trait:"S/N"},
+            {text:"朋友倾诉时，你更擅长：A. 给出理性建议 B. 给予情感支持", type:"scenario", trait:"T/F"},
+            {text:"周末你更可能：A. 参加社交活动 B. 在家安静休息", type:"scenario", trait:"E/I"},
+            {text:"旅行时你更倾向于：A. 严格按照行程 B. 随心探索发现", type:"scenario", trait:"J/P"},
+            {text:"学习新知识时，你更关注：A. 实际应用 B. 理论体系", type:"scenario", trait:"S/N"},
+            {text:"团队冲突时，你更倾向于：A. 寻求公平解决方案 B. 维护团队和谐", type:"scenario", trait:"T/F"},
+            {text:"社交聚会中你更可能：A. 与多人广泛交流 B. 与少数人深入交谈", type:"scenario", trait:"E/I"},
+            {text:"工作截止日期前，你更可能：A. 提前完成并检查 B. 在压力下高效完成", type:"scenario", trait:"J/P"},
+            {text:"阅读时你更喜欢：A. 实用指南 B. 科幻小说", type:"scenario", trait:"S/N"},
+            {text:"评价他人时你更看重：A. 能力与效率 B. 善良与同理心", type:"scenario", trait:"T/F"},
+            {text:"你更享受：A. 热闹的派对 B. 安静的晚餐", type:"scenario", trait:"E/I"},
+            {text:"组织活动时你更倾向于：A. 明确分工与流程 B. 灵活应对变化", type:"scenario", trait:"J/P"},
+            {text:"你更相信：A. 亲眼所见的事实 B. 直觉和预感", type:"scenario", trait:"S/N"},
+            {text:"朋友犯错时你更可能：A. 直接指出问题 B. 委婉提醒并安慰", type:"scenario", trait:"T/F"},
+            {text:"你更擅长：A. 结识新朋友 B. 维持老朋友关系", type:"scenario", trait:"E/I"},
+            {text:"你更喜欢：A. 有明确目标的任务 B. 开放自由的项目", type:"scenario", trait:"J/P"},
+            {text:"你更关注：A. 事物的具体特征 B. 事物的象征意义", type:"scenario", trait:"S/N"},
+            {text:"你更倾向于：A. 基于原则做决定 B. 基于人情做决定", type:"scenario", trait:"T/F"},
+            {text:"你更可能：A. 主动发起话题 B. 等待他人开启对话", type:"scenario", trait:"E/I"},
+            {text:"你更喜欢：A. 按部就班的工作 B. 充满变化的工作", type:"scenario", trait:"J/P"},
+            {text:"你更擅长：A. 处理具体事务 B. 构思长远规划", type:"scenario", trait:"S/N"},
+            {text:"你更重视：A. 公平正义 B. 人际关系", type:"scenario", trait:"T/F"},
+            {text:"你更享受：A. 与他人合作 B. 独立完成任务", type:"scenario", trait:"E/I"},
+            {text:"你更倾向于：A. 提前准备 B. 即兴发挥", type:"scenario", trait:"J/P"},
+            {text:"你更关注：A. 当下的需求 B. 未来的潜力", type:"scenario", trait:"S/N"},
+            {text:"你更可能：A. 理性分析问题 B. 感性理解问题", type:"scenario", trait:"T/F"},
+            {text:"你更擅长：A. 活跃气氛 B. 倾听他人", type:"scenario", trait:"E/I"},
+            {text:"你更喜欢：A. 清晰的规则 B. 灵活的空间", type:"scenario", trait:"J/P"}
+        ];
+
+        const personalities = {
+            ENTP: {name:"辩论家",desc:"聪明好奇，热爱挑战，善于提出新颖观点，享受智力交锋。你充满创意和机智，喜欢探索各种可能性，是天生的问题解决者和创新者。",careers:["企业家", "律师", "创意总监", "市场营销", "记者", "顾问", "设计师"],partners:["INFJ", "INTJ", "ENTJ", "INTP", "ENFP"]},
+            INTJ: {name:"建筑师",desc:"富有战略眼光，独立思考，追求完美。你是天生的规划者和问题解决者，善于从复杂信息中提炼核心，制定长远计划。",careers:["工程师", "科学家", "战略顾问", "项目经理", "设计师", "分析师"],partners:["ENTP", "ENFP", "INFJ", "INTP", "ISTP"]},
+            INFJ: {name:"提倡者",desc:"富有洞察力和创造力，追求深层意义和价值。你善于理解他人的内心世界，致力于用自己的理念和行动改善世界。",careers:["心理咨询师", "作家", "教育家", "社会工作者", "设计师", "研究员"],partners:["ENTP", "ENFP", "INTJ", "INFP", "ISTJ"]},
+            INFP: {name:"调停者",desc:"理想主义者，富有同情心和创造力，追求真实和意义。你珍视个人价值和内在和谐，善于用独特的视角理解世界。",careers:["作家", "艺术家", "心理咨询师", "教育家", "社会工作者", "设计师"],partners:["ENFJ", "ENTP", "INFJ", "INTJ", "ISFP"]},
+            INTP: {name:"逻辑学家",desc:"理性而好奇，善于分析复杂系统，追求知识的精确性。你是天生的思考者，喜欢探索抽象概念和理论，享受智力挑战。",careers:["程序员", "科学家", "分析师", "工程师", "研究员", "顾问"],partners:["ENTJ", "ENFP", "INTJ", "INFJ", "ISTP"]},
+            ENFJ: {name:"教育家",desc:"富有魅力和说服力，善于激励他人，追求共同成长。你天生具有领导才能，能够理解并激发他人的潜力。",careers:["教育家", "咨询师", "人力资源", "市场营销", "公关", "政治家"],partners:["INFP", "INTP", "ENFP", "ENTP", "ISFJ"]},
+            ENFP: {name:"竞选者",desc:"热情洋溢，富有创造力，追求意义和联系。你充满活力和好奇心，善于发现他人的优点，享受探索新的可能性。",careers:["市场营销", "设计师", "教育家", "作家", "咨询师", "创业者"],partners:["INFJ", "INTJ", "ENTP", "INFP", "ISFP"]},
+            ENTJ: {name:"指挥官",desc:"果断而有战略眼光，善于组织和领导，追求高效和结果。你天生具有领导才能，能够快速做出决策并推动团队前进。",careers:["企业家", "高管", "项目经理", "律师", "工程师", "政治家"],partners:["INTP", "INFP", "INTJ", "ENTP", "ISTJ"]},
+            ISTJ: {name:"物流师",desc:"务实而可靠，注重细节和责任，追求稳定和秩序。你是天生的管理者，善于处理复杂的事务，确保一切按计划进行。",careers:["会计师", "项目经理", "工程师", "警察", "管理员", "分析师"],partners:["ENTP", "ENFP", "INFJ", "INTJ", "ESTJ"]},
+            ISFJ: {name:"守卫者",desc:"温暖而负责，善于照顾他人，追求和谐和稳定。你天生具有同情心和责任感，致力于保护和支持你所关心的人。",careers:["护士", "教师", "人力资源", "管理员", "咨询师", "社会工作者"],partners:["ENFP", "ENTP", "ESFJ", "ESTJ", "INFJ"]},
+            ESTJ: {name:"总经理",desc:"务实而果断，善于组织和管理，追求效率和秩序。你天生具有领导才能，能够建立清晰的结构和流程，确保团队高效运作。",careers:["管理者", "企业家", "律师", "工程师", "政治家", "军官"],partners:["ISFP", "INFP", "ISTJ", "ISFJ", "ENTJ"]},
+            ESFJ: {name:"执政官",desc:"热情而负责，善于建立和谐的人际关系，追求共同的福祉。你天生具有社交才能，能够创造温暖包容的环境，让每个人都感到被重视。",careers:["教师", "护士", "人力资源", "公关", "咨询师", "活动策划"],partners:["INTP", "ISTP", "ISFP", "INFP", "ENFP"]},
+            ISTP: {name:"鉴赏家",desc:"冷静而务实，善于解决实际问题，追求刺激和挑战。你天生具有机械和技术才能，享受动手实践和探索物理世界的乐趣。",careers:["工程师", "技师", "运动员", "侦探", "设计师", "军人"],partners:["ENFJ", "ENTJ", "INFJ", "INTJ", "ESTP"]},
+            ISFP: {name:"探险家",desc:"敏感而富有艺术气息，追求个人表达和美感，享受当下的体验。你天生具有创造力和审美能力，善于通过艺术和行动表达自己。",careers:["艺术家", "设计师", "摄影师", "音乐家", "厨师", "理疗师"],partners:["ENFJ", "ENTP", "INFP", "INTP", "ESFP"]},
+            ESTP: {name:"企业家",desc:"大胆而务实，善于应对挑战，追求刺激和结果。你天生具有冒险精神和商业头脑，享受在高压环境下解决问题和创造价值。",careers:["企业家", "销售", "运动员", "警察", "消防员", "经纪人"],partners:["INFJ", "INFP", "ISTP", "ISFP", "ENTJ"]},
+            ESFP: {name:"表演者",desc:"热情而富有魅力，善于娱乐他人，享受生活的乐趣。你天生具有表演才能和社交魅力，能够在任何场合创造欢乐和活力。",careers:["演员", "主持人", "销售", "活动策划", "公关", "旅游顾问"],partners:["INTP", "INTJ", "ISFP", "ISTP", "ENFP"]}
+        };
+
+        let currentQ = 0;
+        let answers = [];
+        let personalityScores = {E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0};
+        const AUTO_JUMP_DELAY = 500;
+
+        function startTest() {
+            currentQ = 0;
+            answers = [];
+            personalityScores = {E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0};
+            document.getElementById('resultCard').style.display = 'none';
+            document.getElementById('questionContainer').style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQ];
+            document.getElementById('questionText').textContent = q.text;
+            document.getElementById('questionCounter').textContent = `题目 ${currentQ+1}/100`;
+            const options = document.getElementById('options');
+            options.innerHTML = '';
+
+            document.getElementById('prevBtn').classList.toggle('active', currentQ > 0);
+            document.getElementById('nextBtn').classList.toggle('active', answers[currentQ] !== undefined);
+
+            if (q.type === "bool") {
+                options.innerHTML = `<button class="option-btn" onclick="selectAnswer('yes')">是</button><button class="option-btn" onclick="selectAnswer('no')">否</button>`;
+            } else {
+                const [a, b] = q.text.split("A. ")[1].split(" B. ");
+                options.innerHTML = `<button class="option-btn" onclick="selectAnswer('A')">A. ${a}</button><button class="option-btn" onclick="selectAnswer('B')">B. ${b}</button>`;
+            }
+
+            const progress = ((currentQ + 1)/100)*100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+
+            if (answers[currentQ]) {
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    if (btn.textContent.startsWith(answers[currentQ])) btn.classList.add('selected');
+                });
+            } else {
+                document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+            }
+
+            document.getElementById('alert').style.display = 'none';
+        }
+
+        function selectAnswer(ans) {
+            answers[currentQ] = ans;
+            const q = questions[currentQ];
+            if (q.type === "bool") {
+                if (ans === "yes") personalityScores[q.trait] += 1;
+                else {
+                    const opposite = q.trait === "E" ? "I" : q.trait === "S" ? "N" : q.trait === "T" ? "F" : "P";
+                    personalityScores[opposite] += 1;
+                }
+            } else {
+                if (ans === "A") personalityScores[q.trait.split("/")[0]] += 1;
+                else personalityScores[q.trait.split("/")[1]] += 1;
+            }
+
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                if (btn.textContent.startsWith(ans)) btn.classList.add('selected');
+                else btn.classList.remove('selected');
+            });
+
+            document.getElementById('nextBtn').classList.add('active');
+
+            if (currentQ < 99) {
+                setTimeout(() => {
+                    currentQ++;
+                    loadQuestion();
+                }, AUTO_JUMP_DELAY);
+            } else {
+                setTimeout(showResult, AUTO_JUMP_DELAY);
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQ > 0) {
+                currentQ--;
+                loadQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            if (answers[currentQ] === undefined) {
+                document.getElementById('alert').style.display = 'block';
+                return;
+            }
+            currentQ++;
+            if (currentQ >= 100) showResult();
+            else loadQuestion();
+        }
+
+        function showResult() {
+            const type = [
+                personalityScores.E > personalityScores.I ? "E" : "I",
+                personalityScores.S > personalityScores.N ? "S" : "N",
+                personalityScores.T > personalityScores.F ? "T" : "F",
+                personalityScores.J > personalityScores.P ? "J" : "P"
+            ].join('');
+
+            document.getElementById('questionContainer').style.display = 'none';
+            document.getElementById('resultCard').style.display = 'block';
+            const data = personalities[type] || personalities.ENFP;
+            document.getElementById('personalityType').textContent = type;
+            document.getElementById('personalityName').textContent = data.name;
+            document.getElementById('personalityIcon').textContent = type[0];
+            document.getElementById('personalityDesc').innerHTML = `<p>${data.desc}</p>`;
+
+            new Chart(document.getElementById('personalityChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['外向(E)', '内向(I)', '实感(S)', '直觉(N)', '理性(T)', '感性(F)', '判断(J)', '知觉(P)'],
+                    datasets: [{
+                        label: '得分',
+                        data: [personalityScores.E, personalityScores.I, personalityScores.S, personalityScores.N, personalityScores.T, personalityScores.F, personalityScores.J, personalityScores.P],
+                        backgroundColor: ['#8899a6', '#a0aec0', '#8899a6', '#a0aec0', '#8899a6', '#a0aec0', '#8899a6', '#a0aec0'],
+                        borderWidth: 0,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {y: {beginAtZero: true, max: 50}}
+                }
+            });
+
+            document.getElementById('careerMatches').innerHTML = data.careers.map(c => `<div class="match-item">${c}</div>`).join('');
+            document.getElementById('partnerMatches').innerHTML = data.partners.map(p => `<div class="match-item">${p}</div>`).join('');
+        }
+    </script>
+</body>
+</html>
